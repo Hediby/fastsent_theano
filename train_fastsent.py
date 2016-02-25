@@ -54,7 +54,7 @@ class MinibatchSentenceIt(object):
             # Here it's savage, maybe find sth smarter and quicker
             if len(minibatch)==self.batch_size:
                 M = max(Ls)
-                padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)],dtype='int32')
+                padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)], dtype='int32')
                 minibatch = []
                 Ls = []
                 yield padded
@@ -63,10 +63,13 @@ if __name__ == '__main__':
     path = 'bigpage_tokenized.txt'
     vocab = Counter()
     print "build vocab"
+    Ls = []
     sentences = SentenceIt(path)
     for s in sentences:
+        Ls.append(len(s))
         for w in s:
             vocab[w] += 1
+    sns.distplot(Ls)
     n_data = sentences.n_data
     w2i = {}
     i2w = []
@@ -76,7 +79,7 @@ if __name__ == '__main__':
         i2w.append(w)
         f.write("%s\n" % w.encode('utf-8'))
     f.close()
-    batch_size = 64
+    batch_size = 128
     vocab_size = len(i2w)
     dim = 200
     n_epochs = 50
@@ -84,12 +87,14 @@ if __name__ == '__main__':
     save_every = 1000
     
     batches = MinibatchSentenceIt(path, batch_size, w2i)
-    print "create model"
-    model = FastSent.create(vocab_size, dim)
-    model.train(batches, 
-                lr=0.025, 
-                min_lr=0.0001, 
-                n_epochs=n_epochs, 
-                saving_path=saving_path, 
-                save_every=save_every, 
-                verbose=True)
+    
+#    
+#    print "create model"
+#    model = FastSent.create(vocab_size, dim)
+#    model.train(batches, 
+#                lr=0.025, 
+#                min_lr=0.0001, 
+#                n_epochs=n_epochs, 
+#                saving_path=saving_path, 
+#                save_every=save_every, 
+#                verbose=True)
