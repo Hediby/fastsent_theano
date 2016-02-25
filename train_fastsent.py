@@ -58,7 +58,6 @@ class MinibatchSentenceIt(object):
                 minibatch = []
                 Ls = []
                 yield padded
-            
     
 if __name__ == '__main__':
     path = 'bigpage_tokenized.txt'
@@ -73,7 +72,7 @@ if __name__ == '__main__':
     i2w = []
     f = open('vocab','w')
     for k,(w,_) in enumerate([('<pad>', 0)] + vocab.most_common()[:100000]):
-        w2i[w] = k+1
+        w2i[w] = k
         i2w.append(w)
         f.write("%s\n" % w.encode('utf-8'))
     f.close()
