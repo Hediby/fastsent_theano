@@ -54,7 +54,7 @@ class MinibatchSentenceIt(object):
             # Here it's savage, maybe find sth smarter and quicker
             if len(minibatch)==self.batch_size:
                 M = max(Ls)
-                padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)]).astype('int32')
+                padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)],dtype='int32')
                 minibatch = []
                 Ls = []
                 yield padded
