@@ -2,7 +2,7 @@
 """
 Created on Wed Feb 24 16:28:10 2016
 
-@author: hedi
+@author: arame
 """
 
 import theano
