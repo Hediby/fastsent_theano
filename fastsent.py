@@ -102,7 +102,7 @@ class FastSent(Model):
                     break
             if break_all:
                 break
-                                                  
+           
 if __name__=='__main__':
     vocab_size = 100000
     dim = 300

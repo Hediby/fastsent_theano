@@ -72,12 +72,15 @@ if __name__ == '__main__':
     sns.distplot(Ls)
     n_data = sentences.n_data
     w2i = {}
+    w2f = {}
     i2w = []
     f = open('vocab','w')
-    for k,(w,_) in enumerate([('<pad>', 0)] + vocab.most_common()[:100000]):
+    mc =  vocab.most_common()[:100000]
+    S =  sum(map(lambda x:x[1], mc))
+    for k,(w,c) in enumerate([('<pad>', 0)] + mc):
         w2i[w] = k
         i2w.append(w)
-        f.write("%s\n" % w.encode('utf-8'))
+        f.write("%s %f\n" % (w.encode('utf-8'),float(c)/S))
     f.close()
     batch_size = 128
     vocab_size = len(i2w)
