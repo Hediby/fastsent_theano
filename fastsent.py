@@ -14,7 +14,8 @@ import cPickle
 from theano.tensor.nnet import softmax
 #dtype = theano.config.dtype
 dtype='float32'
-class FastSent(object):
+
+class Model(object):
     @classmethod
     def load(cls,path):
         params = cPickle.load(open(path,'r'))
@@ -26,7 +27,13 @@ class FastSent(object):
         W = 0.001*np.random.randn(vocab_size, dim).astype(dtype)
         V = 0.001*np.random.randn(vocab_size, dim).astype(dtype)
         return cls(W,V,autoencode)
+    
+    def save(self, saving_path):
+        to_save = [self.W, self.V, self.autoencode]
+        cPickle.dump(to_save, open(saving_path,'w'))
+        return None
         
+class FastSent(Model):
     def __init__(self, W,V,autoencode):
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
@@ -67,10 +74,6 @@ class FastSent(object):
                                       outputs = [cost], 
                                       updates=updates, allow_input_downcast=True)
                                      
-    def save(self, saving_path):
-        to_save = [self.W, self.V, self.autoencode]
-        cPickle.dump(to_save, open(saving_path,'w'))
-        return None
                                       
     def train(self, batch_iterator, lr, min_lr, n_epochs, 
               saving_path, save_every, verbose = True):
@@ -99,7 +102,7 @@ class FastSent(object):
                     break
             if break_all:
                 break
-                                      
+                                                  
 if __name__=='__main__':
     vocab_size = 100000
     dim = 300
