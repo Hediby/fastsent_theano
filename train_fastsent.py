@@ -60,7 +60,7 @@ class MinibatchSentenceIt(object):
                 yield padded
     
 if __name__ == '__main__':
-    path = 'bigpage_tokenized.txt'
+    path = '/media/data/datasets/wikipedia/bigpage_tokenized.txt'
     vocab = Counter()
     print "build vocab"
     Ls = []
@@ -69,18 +69,22 @@ if __name__ == '__main__':
         Ls.append(len(s))
         for w in s:
             vocab[w] += 1
-    sns.distplot(Ls)
+    #sns.distplot(Ls)
     n_data = sentences.n_data
     w2i = {}
-    w2f = {}
+    i2cf = []
     i2w = []
     f = open('vocab','w')
     mc =  vocab.most_common()[:100000]
-    S =  sum(map(lambda x:x[1], mc))
+    cumFreq=0
     for k,(w,c) in enumerate([('<pad>', 0)] + mc):
+        cumFreq+=int(c)
         w2i[w] = k
+        i2cf.append(cumFreq)
         i2w.append(w)
-        f.write("%s %f\n" % (w.encode('utf-8'),float(c)/S))
+        f.write("%s %f\n" % (w.encode('utf-8'),int(c)))
+    
+    i2f=[cf/cumFreq for cf in i2cf]
     f.close()
     batch_size = 128
     vocab_size = len(i2w)
@@ -89,7 +93,7 @@ if __name__ == '__main__':
     saving_path = "chinese.fastsent"
     save_every = 1000
     
-    batches = MinibatchSentenceIt(path, batch_size, w2i)
+#    batches = MinibatchSentenceIt(path, batch_size, w2i)
     
 #    
 #    print "create model"
