@@ -97,7 +97,7 @@ if __name__ == '__main__':
     
 #    
 #    print "create model"
-#    model = FastSent.create(vocab_size, dim)
+#    model = FastSent.create(vocab_size, dim,i2f=i2f)
 #    model.train(batches, 
 #                lr=0.025, 
 #                min_lr=0.0001, 

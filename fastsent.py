@@ -23,10 +23,10 @@ class Model(object):
         return cls(W, V, autoencode)
     
     @classmethod
-    def create(cls, vocab_size, dim, autoencode=True):
+    def create(cls, vocab_size, dim, autoencode=True,i2f=None):
         W = 0.001*np.random.randn(vocab_size, dim).astype(dtype)
         V = 0.001*np.random.randn(vocab_size, dim).astype(dtype)
-        return cls(W,V,autoencode)
+        return cls(W,V,autoencode,i2f)
     
     def save(self, saving_path):
         to_save = [self.W, self.V, self.autoencode]
@@ -34,7 +34,7 @@ class Model(object):
         return None
         
 class FastSent(Model):
-    def __init__(self, W,V,autoencode):
+    def __init__(self, W,V,autoencode,i2f):
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
         self.autoencode = autoencode
@@ -104,9 +104,10 @@ class FastSent(Model):
                 break
 
 class FastSentNeg(Model):
-    def __init__(self, W,V,autoencode):
+    def __init__(self, W,V,autoencode,i2f):
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
+        self.i2f=i2f
         self.autoencode = autoencode
         self.params = [self.W,self.V]
         
