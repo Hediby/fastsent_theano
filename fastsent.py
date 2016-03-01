@@ -9,7 +9,6 @@ import theano
 import numpy as np
 from time import time
 import theano.tensor as T
-import seaborn as sns
 import cPickle
 from theano.tensor.nnet import softmax
 #dtype = theano.config.dtype
@@ -17,7 +16,7 @@ from random import random
 from bisect import bisect
 
 
-def weighted_choice():
+def weighted_choice(i2f):
     x = random()
     i = bisect(i2f, x)
     return i
@@ -32,7 +31,7 @@ class Model(object):
         return cls(W, V, autoencode)
     
     @classmethod
-    def create(cls, vocab_size, dim, autoencode=True,i2f=None,index_fixe=[]):
+    def create(cls, vocab_size, dim, autoencode=True,i2f=None,index_fixe=[0]):
         W = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
         V = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
         return cls(W,V,autoencode,i2f,index_fixe)
@@ -77,8 +76,9 @@ class FastSentNeg(Model):
         I = T.concatenate(I, axis=1)
         M = T.concatenate(M, axis=1)
         
-        neg_len=200
-        neg=[weighted_choice() for i in range(neg_len)]         
+        neg_len=10
+        neg=[weighted_choice(self.i2f) for i in range(neg_len)] 
+        print neg        
         max_len=I.shape[1]
         pos=I.flatten()
         index=T.concatenate([pos,neg])
@@ -116,7 +116,7 @@ class FastSentNeg(Model):
         # Here is sgd, we could make it better
         sub_update={}
 
-        for p,g,n in zip(params, grads,params_name):
+        for p,g,n in zip(params, grads,self.params_name):
             sub_update[n]=-lr*g
         
         updateV=T.inc_subtensor(self.V[index],sub_update["V_index"] )
@@ -131,20 +131,23 @@ class FastSentNeg(Model):
         self._train = theano.function(inputs = [indexes, lr],
                                       outputs = [cost], 
                                       updates=updates, 
-                                      allow_input_downcast=True)
-                                     
+                                      allow_input_downcast=True,
+                                      on_unused_input='warn')
                                       
+
     def train(self, batch_iterator, lr, min_lr, n_epochs, 
               saving_path, save_every, verbose = True):
         n_iter = 0
         break_all = False
         for epoch in xrange(n_epochs+1):
+            cost_vec=[]
             learning_rate = min_lr + (n_epochs-epoch)*(lr-min_lr)/n_epochs
             for batch in batch_iterator:
                 b = batch
                 tic = time()
                 cost = self._train(b, learning_rate)[0]
                 toc = time() - tic
+                cost_vec.append(cost)
                 n_iter += 1
                 if not n_iter%save_every:
                     if verbose:
@@ -159,6 +162,8 @@ class FastSentNeg(Model):
                     break_all = True
                 if break_all:
                     break
+            if verbose:
+                print "End Epoch %d Mean Cost %f " % (epoch, np.mean(np.array(cost_vec)))
             if break_all:
                 break      
 
@@ -202,7 +207,8 @@ class FastSent(Model):
         updates = [(p, p-lr*g) for p,g in zip(self.params, self.grads)]
         self._train = theano.function(inputs = [indexes, lr],
                                       outputs = [cost], 
-                                      updates=updates, allow_input_downcast=True)
+                                      updates=updates, 
+                                      allow_input_downcast=True)
                                      
                                       
     def train(self, batch_iterator, lr, min_lr, n_epochs, 
@@ -235,24 +241,34 @@ class FastSent(Model):
 
      
 if __name__=='__main__':
-    vocab_size = 100000
-    dim = 300
-    batch_size = 64
-    max_len = 20
+    vocab_size = 1000
+    dim = 200
+    batch_size = 50
+    max_len = 15
     n_data = 1000
     
     np.random.seed(1234)
-    lengths = np.random.randint(10,max_len+1, size=n_data)
+    lengths = np.random.randint(5,max_len+1, size=n_data)
     data = [np.random.randint(0,vocab_size,size=l).astype('float32') for l in lengths]
-   
-    model = FastSent(vocab_size,dim,False)
-    lr = 0.001
+    
+    i2f=[0]+[1./(f+1) for f in range(1,vocab_size)]
+    i2cf=[]
+    cumf=0
+    for f in i2f:
+        cumf+=f
+        i2cf.append(cumf)
+    i2f=[cf/cumf for cf in i2cf]
+    print i2f[:20]
+
+    model = FastSentNeg.create(vocab_size,dim,False,i2f=i2f)
+    lr = 0.1
     
     n_batches = n_data/batch_size
-    n_epochs = 500
+    n_epochs = 100
     n_updates = 0
     break_all = False
     for epoch in xrange(n_epochs):
+        mean_cost=[]
         for batch_id in xrange(n_batches):
             begin = batch_id*batch_size
             end = min((batch_id+1)*batch_size, n_data)
@@ -262,12 +278,13 @@ if __name__=='__main__':
             padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)]).astype('int32')
             tic = time()
             cost = model._train(padded,lr)[0]
+            mean_cost.append(cost)
             toc = time()-tic
-            print "Epoch %d Update %d Cost %f Took %fs" % (epoch, n_updates, cost, toc)
             n_updates += 1
             if np.isnan(cost):
                 break_all = True
             if break_all:
                 break
+        print "Epoch %d Update %d Cost %f " % (epoch, n_updates, np.mean(np.array(mean_cost)))
         if break_all:
             break    

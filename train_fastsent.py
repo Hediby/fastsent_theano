@@ -93,15 +93,14 @@ if __name__ == '__main__':
     saving_path = "chinese.fastsent"
     save_every = 1000
     
-#    batches = MinibatchSentenceIt(path, batch_size, w2i)
+    batches = MinibatchSentenceIt(path, batch_size, w2i)
     
-#    
-#    print "create model"
-#    model = FastSent.create(vocab_size, dim,i2f=i2f)
-#    model.train(batches, 
-#                lr=0.025, 
-#                min_lr=0.0001, 
-#                n_epochs=n_epochs, 
-#                saving_path=saving_path, 
-#                save_every=save_every, 
-#                verbose=True)
+    print "create model"
+    model = FastSent.create(vocab_size, dim,i2f=i2f)
+    model.train(batches, 
+                lr=0.025, 
+                min_lr=0.0001, 
+                n_epochs=n_epochs, 
+                saving_path=saving_path, 
+                save_every=save_every, 
+                verbose=True)
