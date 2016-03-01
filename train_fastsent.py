@@ -35,10 +35,10 @@ class SentenceIt(object):
         
     def __iter__(self):
         for s in open(path,'r'):
-            s = u"%s" % s.decode('utf-8')
-            self.n_data += 1
-            print s
-            yield s[:-1]
+            s = u"%s" % s.decode('utf-8')[:-1]
+            if len(s)>0:
+                self.n_data += 1
+                yield s
             
 class MinibatchSentenceIt(object):
     def __init__(self, path, batch_size, w2i):
