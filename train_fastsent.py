@@ -76,7 +76,7 @@ class MinibatchSentenceIt(object):
     
 if __name__ == '__main__':
     remote=True
-    path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed' if remote else "dataset.txt"
+    path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed_extract' if remote else "dataset.txt"
     vocab = Counter()
     print "build vocab"
     Ls = []
