@@ -31,11 +31,20 @@ class Model(object):
         return cls(W, V, autoencode)
     
     @classmethod
-    def create(cls, vocab_size, dim, autoencode=True,i2f=None,index_fixe=[0]):
+    def create(cls, vocab_size, dim, autoencode=True):
+        W = 0.001*np.random.randn(vocab_size, dim)
+        V = 0.001*np.random.randn(vocab_size, dim)
+        return cls(W,V,autoencode)
+    
+    @classmethod
+    def createNeg(cls, vocab_size, dim, autoencode=True,i2f=None,index_fixe=[0],i2e=[]):
         W = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
         V = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
-        return cls(W,V,autoencode,i2f,index_fixe)
-    
+        for i,e in i2e.items():
+            W[i]=e
+            V[i]=e
+        return cls(W,V,autoencode,i2f,index_fixe)    
+
     def save(self, saving_path):
         to_save = [self.W, self.V, self.autoencode]
         cPickle.dump(to_save, open(saving_path,'w'))
