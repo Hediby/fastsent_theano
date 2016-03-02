@@ -10,8 +10,6 @@ import numpy as np
 from fastsent import FastSent
 import utils
 import sys
-sys.path.insert(0, '/home/arame/hakken-api/models/')
-import model
 
 def indexize(sentence, w2i):
     res = []
@@ -75,7 +73,7 @@ class MinibatchSentenceIt(object):
                 yield padded
     
 if __name__ == '__main__':
-    remote=True
+    remote=False
     path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed' if remote else "dataset.txt"
     vocab = Counter()
     print "build vocab"
@@ -116,25 +114,33 @@ if __name__ == '__main__':
     batch_size = 200
     vocab_size = len(i2w)
     n_epochs = 50000
+    dim=200 if remote else 6
     saving_path = "/media/data/datasets/models/word2vec_model/chinese/first" if remote else "chineseModel"
     save_every = 1000
 
-    print w2i
     batches = MinibatchSentenceIt(path, batch_size, w2i)
     print "begin"
-    for l in batches:
-        print l
+
 
     i2e={}
     index_fixe=[]
-    pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec"
+    pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "pretrained.txt"
 
-    pretrained=model.model(pretrainedFile)
-    for word,oldi in pretrained.words.items(): 
+    if remote:
+        sys.path.insert(0, '/home/arame/hakken-api/models/')
+        import model
+        pretrained=model.model(pretrainedFile)
+        wordsModel=pretrained.words
+        floatsModel=pretrained.words
+    else:
+        import utils
+        wordsModel,floatsModel=utils.loadModel(pretrainedFile)
+    
+    for word,oldi in wordsModel.items(): 
         if word in words:
             i=w2i[word]
             index_fixe.append(i)
-            i2e[i]=pretrained.floats[oldi]
+            i2e[i]=floatsModel[oldi]
     print words[0:10]            
     print "create model"
 
