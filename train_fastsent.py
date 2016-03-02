@@ -8,10 +8,11 @@ from collections import Counter
 #import seaborn as sns
 import numpy as np
 from fastsent import FastSent
-import utils
 import sys
 sys.path.insert(0, '/home/arame/hakken-api/models/')
 import model
+import utils
+
 
 def indexize(sentence, w2i):
     res = []
@@ -75,12 +76,14 @@ class MinibatchSentenceIt(object):
                 yield padded
     
 if __name__ == '__main__':
+    np.random.seed(1234)
     remote=True
     path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed_extract' if remote else "dataset.txt"
     vocab = Counter()
     print "build vocab"
     Ls = []
-    sentences = SentenceIt(path)
+    #sep=" "
+    sentences = SentenceIt(path)#.split(sep)
     for s in sentences:
         if s[0]=="#":
             Ls.append(1)
@@ -110,26 +113,25 @@ if __name__ == '__main__':
     f.close()
 
     words=w2i.keys()
-    print words
+    print words[0:10]
 
     print i2f[:10]
+    dim=200
     batch_size = 200
     vocab_size = len(i2w)
     n_epochs = 50000
     saving_path = "/media/data/datasets/models/word2vec_model/chinese/first" if remote else "chineseModel"
-    save_every = 1000
+    save_every = 100
 
-    print w2i
+    
     batches = MinibatchSentenceIt(path, batch_size, w2i)
     print "begin"
-    for l in batches:
-        print l
 
     i2e={}
     index_fixe=[]
     pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec"
 
-    pretrained=model.model(pretrainedFile)
+    pretrained=model.model(pretrainedFile,max_voc=50000)
     for word,oldi in pretrained.words.items(): 
         if word in words:
             i=w2i[word]
@@ -140,8 +142,8 @@ if __name__ == '__main__':
 
     model = FastSent.createNeg(vocab_size, dim,i2f=i2f,index_fixe=index_fixe,i2e=i2e)
     model.train(batches, 
-                lr=0.025, 
-                min_lr=0.0001, 
+                lr=0.000025, 
+                min_lr=0.0000001, 
                 n_epochs=n_epochs, 
                 saving_path=saving_path, 
                 save_every=save_every, 
