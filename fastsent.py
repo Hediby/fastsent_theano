@@ -2,7 +2,7 @@
 """
 Created on Wed Feb 24 16:28:10 2016
 
-@author: arame
+@author: hedi & arame
 """
 
 import theano
@@ -53,7 +53,6 @@ class Model(object):
 
 class FastSentNeg(Model):
     def __init__(self, W,V,autoencode,i2f,index_fixe):
-        
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
         self.i2f=i2f
@@ -132,6 +131,7 @@ class FastSentNeg(Model):
         updateV=T.set_subtensor(updateV[index_fixe],self.V[index_fixe])  
         updateW=T.inc_subtensor(self.W[indexX],sub_update["W_index"])
         updateW=T.set_subtensor(updateW[index_fixe],self.W[index_fixe])  
+        
         
         updates = []
         updates.append((self.V,updateV))
@@ -231,7 +231,6 @@ class FastSent(Model):
                 b = batch
                 tic = time()
                 cost = self._train(b, learning_rate)[0]
-                #print self.W.get_value()
                 toc = time() - tic
                 n_iter += 1
                 if not n_iter%save_every:

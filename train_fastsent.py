@@ -2,7 +2,7 @@
 """
 Created on Wed Feb 24 15:51:31 2016
 
-@author: hedi
+@author: hedi & arame
 """
 from collections import Counter
 #import seaborn as sns
@@ -12,11 +12,13 @@ import sys
 
 def indexize(sentence, w2i):
     res = []
+    if len(sentence)==0:
+        return res
     if sentence[0]=="#":
         try:
             return [w2i[sentence]]
         except:
-            return []
+            return res
     for w in sentence:
         try:
             i = w2i[w]
@@ -69,10 +71,6 @@ class MinibatchSentenceIt(object):
                 self.i=self.i+1
                 M = max(Ls)
                 padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)], dtype='int32')                
-                if self.i >1:
-                    print self.i
-                    print padded 
-
                 minibatch = []
                 Ls = []
                 yield padded
@@ -80,7 +78,7 @@ class MinibatchSentenceIt(object):
 if __name__ == '__main__':
 
     np.random.seed(1234)
-    remote=False
+    remote=True
     path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed_extract' if remote else "dataset.txt"
 
     vocab = Counter()
@@ -119,11 +117,11 @@ if __name__ == '__main__':
 
     words=w2i.keys()
     print "vocab size: " + str(len(words))
-    print words#[0:10]
+    print words[:10]
 
     print i2f[:10]
     dim=200
-    batch_size = 100 if remote else 5
+    batch_size = 200 if remote else 5
     vocab_size = len(i2w)
     n_epochs = 50000 if remote else 2
     dim=200 if remote else 6
@@ -142,7 +140,7 @@ if __name__ == '__main__':
         sys.path.insert(0, '/home/arame/hakken-api/models/')
         import model
         import utils
-        pretrained=model.model(pretrainedFile)
+        pretrained=model.model(pretrainedFile,max_voc=20000)
         wordsModel=pretrained.words
         floatsModel=pretrained.floats
     else:
@@ -154,16 +152,17 @@ if __name__ == '__main__':
             i=w2i[word]
             index_fixe.append(i)
             i2e[i]=floatsModel[oldi]
-    print index_fixe
+    
+    print index_fixe[:10]
     print words[0:10]
-    print i2e.keys()
+    
     print "create model"
-    lr=0.000025 if remote else 0.01
+    lr=0.0025 if remote else 0.01
     model = FastSentNeg.createNeg(vocab_size, dim,i2f=i2f,index_fixe=index_fixe,i2e=i2e)
-#    model.train(batches, 
-#                lr=lr, 
-#                min_lr=lr/float(100), 
-#                n_epochs=n_epochs, 
-#                saving_path=saving_path, 
-#                save_every=save_every, 
-#                verbose=True)
+    model.train(batches, 
+                lr=lr, 
+                min_lr=lr/float(100), 
+                n_epochs=n_epochs, 
+                saving_path=saving_path, 
+                save_every=save_every, 
+                verbose=True)
