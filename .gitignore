@@ -1,3 +1,6 @@
 *
 !*.py
 !.gitignore
+utils.py
+*.txt
+

@@ -116,7 +116,6 @@ class FastSentNeg(Model):
         
         prediction = softmax(acti_mask)
 
-        logpred=T.log(prediction)*mask_zero
         cost = T.mean(T.sum(-T.log(prediction)*mask_zero, axis=1))
         
         lr = T.scalar('lr', dtype=dtype)
@@ -172,6 +171,7 @@ class FastSentNeg(Model):
                 if break_all:
                     break
             if verbose:
+                print "end epoch"
                 print "End Epoch %d Mean Cost %f " % (epoch, np.mean(np.array(cost_vec)))
             if break_all:
                 break      
