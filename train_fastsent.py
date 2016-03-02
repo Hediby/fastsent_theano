@@ -97,9 +97,9 @@ if __name__ == '__main__':
         
 
     if sep=="":
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed_extract' if remote else "dataset.txt"
+        path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed_extract' if remote else "data/dataset.txt"
     else:
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed_extract' if remote else "dataset_tokenized.txt"
+        path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed_extract' if remote else "data/dataset_tokenized.txt"
     vocab = Counter()
     print "build vocab"
     Ls = []
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     i2e={}
     index_fixe=[0]
-    pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "pretrained.txt"
+    pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "data/pretrained.txt"
 
     if remote:
         sys.path.insert(0, '/home/arame/hakken-api/models/')
