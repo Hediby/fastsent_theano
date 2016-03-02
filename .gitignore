@@ -1,6 +1,9 @@
 *
 !*.py
 !.gitignore
-utils.py
-*.txt
+vocab
+chineseModel
+*.pyc
+#utils.py
+#*.txt
 

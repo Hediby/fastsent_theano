@@ -31,36 +31,39 @@ class Model(object):
         return cls(W, V, autoencode)
     
     @classmethod
-    def create(cls, vocab_size, dim, autoencode=True):
+    def create(cls, vocab_size, dim,w2i, autoencode=True):
         W = 0.001*np.random.randn(vocab_size, dim)
         V = 0.001*np.random.randn(vocab_size, dim)
         return cls(W,V,autoencode)
     
     @classmethod
-    def createNeg(cls, vocab_size, dim, autoencode=True,i2f=None,index_fixe=[0],i2e=[]):
+    def createNeg(cls, vocab_size, dim,w2i, autoencode=True,i2f=None,index_fixe=[0],i2e=[],neg_len=10):
         W = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
         V = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
         for i,e in i2e.items():
             W[i]=e
             V[i]=e
-        return cls(W,V,autoencode,i2f,index_fixe)    
+        return cls(W,V,autoencode,w2i,i2f,index_fixe,neg_len=neg_len)    
 
     def save(self, saving_path):
-        to_save = [self.W, self.V, self.autoencode]
+        to_save = [self.w2i,self.W, self.V, self.autoencode]
         cPickle.dump(to_save, open(saving_path,'w'))
         return None
 
 
 class FastSentNeg(Model):
-    def __init__(self, W,V,autoencode,i2f,index_fixe):
+    def __init__(self, W,V,w2i,autoencode,i2f,index_fixe,neg_len):
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
+        self.w2i=w2i
         self.i2f=i2f
         self.autoencode = autoencode
+        self.neg_len=neg_len
 
         self.params_name=["W_index","V_index"]
         
         indexes = T.imatrix('X')
+        neg=T.ivector('neg')
         batch_mask = 1-T.eq(indexes, T.zeros_like(indexes))
         mask = batch_mask[1:-1]
         maskp = batch_mask[:-2]
@@ -84,10 +87,7 @@ class FastSentNeg(Model):
             M.append(mask)
         I = T.concatenate(I, axis=1)
         M = T.concatenate(M, axis=1)
-        
-        neg_len=10
-        neg=[weighted_choice(self.i2f) for i in range(neg_len)] 
-        print neg        
+            
         max_len=I.shape[1]
         pos=I.flatten()
         index=T.concatenate([pos,neg])
@@ -101,7 +101,7 @@ class FastSentNeg(Model):
         chelou_line=T.arange(I.shape[0]).reshape((-1,1))
 
         pos_columns=T.arange(batch_len*max_len).reshape((batch_len,-1))
-        neg_columns=(T.arange(batch_len*max_len,(batch_len*max_len+neg_len)))
+        neg_columns=(T.arange(batch_len*max_len,(batch_len*max_len+self.neg_len)))
         shaped_neg_columns=(neg_columns.reshape((1,-1)))
         rep_neg_columns=T.repeat(shaped_neg_columns,batch_len,axis=0)
         chelou_column=T.concatenate((pos_columns,rep_neg_columns),axis=1)
@@ -137,7 +137,7 @@ class FastSentNeg(Model):
         updates.append((self.V,updateV))
         updates.append((self.W,updateW))
 
-        self._train = theano.function(inputs = [indexes, lr],
+        self._train = theano.function(inputs = [indexes, lr,neg],
                                       outputs = [cost], 
                                       updates=updates, 
                                       allow_input_downcast=True,
@@ -154,7 +154,8 @@ class FastSentNeg(Model):
             for batch in batch_iterator:
                 b = batch
                 tic = time()
-                cost = self._train(b, learning_rate)[0]
+                neg=np.array([weighted_choice(self.i2f) for i in range(self.neg_len)] )
+                cost = self._train(b, learning_rate,neg)[0]
                 toc = time() - tic
                 cost_vec.append(cost)
                 n_iter += 1
@@ -172,14 +173,14 @@ class FastSentNeg(Model):
                 if break_all:
                     break
             if verbose:
-                print "end epoch"
                 print "End Epoch %d Mean Cost %f " % (epoch, np.mean(np.array(cost_vec)))
             if break_all:
                 break      
 
 
 class FastSent(Model):
-    def __init__(self, W,V,autoencode,i2f,index_fixe):
+    def __init__(self, W,V,w2i,autoencode):
+        self.w2i=w2i
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
         self.autoencode = autoencode
