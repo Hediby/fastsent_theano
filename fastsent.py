@@ -26,15 +26,16 @@ dtype='float32'
 class Model(object):
     @classmethod
     def load(cls,path):
-        params = cPickle.load(open(path,'r'))
-        W, V, autoencode= params
-        return cls(W, V, autoencode)
+        with open(path,'rb') as f:
+            params= cPickle.load(f)
+        w2i,W, V, autoencode= params
+        return cls(W, V,w2i, autoencode)
     
     @classmethod
     def create(cls, vocab_size, dim,w2i, autoencode=True):
         W = 0.001*np.random.randn(vocab_size, dim)
         V = 0.001*np.random.randn(vocab_size, dim)
-        return cls(W,V,autoencode)
+        return cls(W,V,w2i,autoencode)
     
     @classmethod
     def createNeg(cls, vocab_size, dim,w2i, autoencode=True,i2f=None,index_fixe=[0],i2e=[],neg_len=10):
@@ -43,16 +44,18 @@ class Model(object):
         for i,e in i2e.items():
             W[i]=e
             V[i]=e
-        return cls(W,V,autoencode,w2i,i2f,index_fixe,neg_len=neg_len)    
+        return cls(W,V,w2i,autoencode,i2f,index_fixe,neg_len=neg_len)    
 
     def save(self, saving_path):
-        to_save = [self.w2i,self.W, self.V, self.autoencode]
-        cPickle.dump(to_save, open(saving_path,'w'))
+        print saving_path
+        data = [self.w2i,self.W, self.V, self.autoencode]
+        with open(saving_path,'wb') as f:
+            cPickle.dump(data, f)
         return None
 
 
 class FastSentNeg(Model):
-    def __init__(self, W,V,w2i,autoencode,i2f,index_fixe,neg_len):
+    def __init__(self, W,V,w2i,autoencode,i2f,index_fixe=[0],neg_len=10):
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
         self.w2i=w2i

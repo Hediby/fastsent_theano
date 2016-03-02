@@ -76,7 +76,6 @@ class MinibatchSentenceIt(object):
                 padded = np.array([np.pad(m, (0,M-l), 'constant') for (m,l) in zip(minibatch, Ls)], dtype='int32')                
                 minibatch = []
                 Ls = []
-                print padded
                 yield padded
     
 if __name__ == '__main__':
@@ -95,11 +94,12 @@ if __name__ == '__main__':
         remote=(sys.argv[2].lower()[0]=='r')
         sep=" " if (sys.argv[1].lower()=='token') else ""
         
-
+    extract=""
+    
     if sep=="":
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed_extract' if remote else "data/dataset.txt"
+        path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed'+extract if remote else "data/dataset.txt"
     else:
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed_extract' if remote else "data/dataset_tokenized.txt"
+        path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed'+extract if remote else "data/dataset_tokenized.txt"
     vocab = Counter()
     print "build vocab"
     Ls = []
@@ -141,13 +141,13 @@ if __name__ == '__main__':
     print "vocab size: " + str(len(words))
     print words[:10]
 
-    print i2f#[:10]
+    print i2f[:10]
     dim=200
-    batch_size = 200 if remote else 5
+    batch_size = 300 if remote else 5
     vocab_size = len(i2w)
-    n_epochs = 50000 if remote else 2
+    n_epochs = 500000 if remote else 2
     dim=200 if remote else 6
-    saving_path = "/media/data/datasets/models/word2vec_model/chinese/first" if remote else "chineseModel"
+    saving_path = "/media/data/datasets/models/word2vec_model/chinese/pickle_zh_pt_fastsent.vec"+extract if remote else "chineseModel"
     save_every = 100 if remote else 4
 
     batches = MinibatchSentenceIt(path, batch_size, w2i,sep)
@@ -176,11 +176,11 @@ if __name__ == '__main__':
             i2e[i]=floatsModel[oldi]
     
     print index_fixe[:10]
-    print words[0:10]
+    print words[:10]
     
     print "create model"
     lr=0.0025 if remote else 0.01
-    neg_len=100 if remote else 10
+    neg_len=1000 if remote else 10
     model = FastSentNeg.createNeg(vocab_size, dim,w2i=w2i,i2f=i2f,index_fixe=index_fixe,i2e=i2e,neg_len=neg_len)
     #model = FastSent.create(vocab_size, dim)
     model.train(batches, 
