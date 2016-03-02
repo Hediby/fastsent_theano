@@ -53,6 +53,7 @@ class Model(object):
 
 class FastSentNeg(Model):
     def __init__(self, W,V,autoencode,i2f,index_fixe):
+        
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
         self.i2f=i2f
@@ -230,6 +231,7 @@ class FastSent(Model):
                 b = batch
                 tic = time()
                 cost = self._train(b, learning_rate)[0]
+                #print self.W.get_value()
                 toc = time() - tic
                 n_iter += 1
                 if not n_iter%save_every:
