@@ -96,7 +96,7 @@ if __name__ == '__main__':
         tokenized=True if (sys.argv[2].lower()[0]=='t') else False # t for tokenized
         
     strExtract=""
-    strToken="_tokenized" if (tokenized and lang=="zh") else ""
+    strToken="_tok" if (tokenized and lang=="zh") else ""
 
     if lang=="zh":
         path = '/media/data/datasets/wikipedia/entities/bigpage_zh'+strToken+'.txt_line_processed'+strExtract if remote else "data/dataset"+strToken+".txt"
@@ -142,20 +142,19 @@ if __name__ == '__main__':
 
     words=w2i.keys()
     print "vocab size: " + str(len(words))
-    print words[:10]
+    print "words: "+ str(words[:10])
+    print "i2f: "+ str(i2f[:10])
 
-    print i2f[:10]
-    dim=200
     batch_size = 300 if remote else 5
     vocab_size = len(i2w)
     n_epochs = 500000 if remote else 2
     dim=200 if remote else 6
     pt="_pt" if lang!="en" else ""
-    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_"+lang+pt+"_fastsent.vec"+extract if remote else "chineseModel"
     
-    save_every = 100 if remote else 4
+    save_every = 1000 if remote else 4
 
     batches = MinibatchSentenceIt(path, batch_size, w2i,tokenized)
+    
     print "begin"
 
 
@@ -185,12 +184,16 @@ if __name__ == '__main__':
                 index_fixe.append(i)
             i2e[i]=floatsModel[oldi]
     
-    print index_fixe[:10]
-    print words[:10]
+    print "index_fixe: "+ str(index_fixe[:10])
     
     print "create model"
     lr=0.0025 if remote else 0.01
     neg_len=800 if remote else 10
+    strNeg="_neg"+str(neg_len)
+    strBs="_bs"+str(batch_size)
+
+    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_"+lang+pt+"_fastsent"+strToken+strBs+strNeg+".vec"+extract if remote else "chineseModel"
+
     model = FastSentNeg.createNeg(vocab_size, dim,w2i=w2i,i2f=i2f,index_fixe=index_fixe,i2e=i2e,neg_len=neg_len)
     #model = FastSent.create(vocab_size, dim)
     model.train(batches, 
