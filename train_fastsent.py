@@ -80,26 +80,30 @@ class MinibatchSentenceIt(object):
     
 if __name__ == '__main__':
     if len(sys.argv) < 1:
-        print("usage : train_fastsent.py [sep] [remote]")
+        print("usage : train_fastsent.py lang [sep] [remote] ")
         sys.exit(1)
     np.random.seed(1234)
     
-    if len(sys.argv)==1:
-        sep=""
+    lang=sys.argv[1]
+    if len(sys.argv)==2:
+        sep=" "
         remote=True
-    elif len(sys.argv)==2:
-        remote=True
-        sep=" " if (sys.argv[1].lower()=='token') else ""
     elif len(sys.argv)==3:
-        remote=(sys.argv[2].lower()[0]=='r')
-        sep=" " if (sys.argv[1].lower()=='token') else ""
+        remote=True
+        sep=" " if (sys.argv[2].lower()=='token') else ""
+    elif len(sys.argv)==4:
+        remote=(sys.argv[3].lower()[0]=='r')
+        sep=" " if (sys.argv[2].lower()=='token') else ""
         
     extract=""
-    
-    if sep=="":
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed'+extract if remote else "data/dataset.txt"
-    else:
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed'+extract if remote else "data/dataset_tokenized.txt"
+    if lang=="zh":
+        if sep=="":
+            path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed'+extract if remote else "data/dataset.txt"
+        else:
+            path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed'+extract if remote else "data/dataset_tokenized.txt"
+    elif lang=="en":
+        path='/media/data/datasets/wikipedia/entities/bigpage_'+lang+'.txt_processed'
+        
     vocab = Counter()
     print "build vocab"
     Ls = []
@@ -122,7 +126,7 @@ if __name__ == '__main__':
     i2cf = []
     i2w = []
     f = open('vocab','w')
-    mc =  vocab.most_common()[:150000]
+    mc =  vocab.most_common()[:250000]
     cumFreq=0
     
 
@@ -147,7 +151,9 @@ if __name__ == '__main__':
     vocab_size = len(i2w)
     n_epochs = 500000 if remote else 2
     dim=200 if remote else 6
-    saving_path = "/media/data/datasets/models/word2vec_model/chinese/pickle_zh_pt_fastsent.vec"+extract if remote else "chineseModel"
+    pt="_pt" if lang!="en" else ""
+    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_"+lang+pt+"_fastsent.vec"+extract if remote else "chineseModel"
+    
     save_every = 100 if remote else 4
 
     batches = MinibatchSentenceIt(path, batch_size, w2i,sep)
@@ -156,13 +162,17 @@ if __name__ == '__main__':
 
     i2e={}
     index_fixe=[0]
-    pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "data/pretrained.txt"
+    if lang=="zh":
+        pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "data/pretrained.txt"
+    elif lang=="en":
+        pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_en_ws5_ne5_sa0.0001_mc100.vec"
+        
 
     if remote:
         sys.path.insert(0, '/home/arame/hakken-api/models/')
         import model
         import utils
-        pretrained=model.model(pretrainedFile,max_voc=20000)
+        pretrained=model.model(pretrainedFile,max_voc=200000)
         wordsModel=pretrained.words
         floatsModel=pretrained.floats
     else:
@@ -172,7 +182,8 @@ if __name__ == '__main__':
     for word,oldi in wordsModel.items(): 
         if word in words:
             i=w2i[word]
-            index_fixe.append(i)
+            if len(word)>1 and word[0:2]=="#":
+                index_fixe.append(i)
             i2e[i]=floatsModel[oldi]
     
     print index_fixe[:10]
@@ -180,7 +191,7 @@ if __name__ == '__main__':
     
     print "create model"
     lr=0.0025 if remote else 0.01
-    neg_len=1000 if remote else 10
+    neg_len=800 if remote else 10
     model = FastSentNeg.createNeg(vocab_size, dim,w2i=w2i,i2f=i2f,index_fixe=index_fixe,i2e=i2e,neg_len=neg_len)
     #model = FastSent.create(vocab_size, dim)
     model.train(batches, 
