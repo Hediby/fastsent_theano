@@ -10,7 +10,7 @@ import numpy as np
 from fastsent import FastSent,FastSentNeg
 import sys
 
-def indexize(s, w2i,sep=""):
+def indexize(s, w2i,tokenized=True):
     res = []
     if len(s)==0:
         return res
@@ -19,8 +19,8 @@ def indexize(s, w2i,sep=""):
             return [w2i[s]]
         except:
             return res
-    if sep==" ":
-        s=s.split(sep)
+    if tokenized:
+        s=s.split(" ")
     for w in s:
         try:
             i = w2i[w]
@@ -42,13 +42,13 @@ class SentenceIt(object):
                 yield s
             
 class MinibatchSentenceIt(object):
-    def __init__(self, path, batch_size, w2i,sep):
+    def __init__(self, path, batch_size, w2i,tokenized):
         self.path = path
         self.batch_size = batch_size
         self.w2i = w2i
         self.n_empty = 0
         self.i=0
-        self.sep=sep
+        self.tokenized=tokenized
         
     def __iter__(self):
         # we could make it better by:
@@ -58,7 +58,7 @@ class MinibatchSentenceIt(object):
         Ls = []
         for s in open(path,'r'):
             s = u"%s" % s.decode('utf-8')[:-1]
-            s = indexize(s, self.w2i,self.sep)
+            s = indexize(s, self.w2i,self.tokenized)
             if len(s) == 0:
                 self.n_empty += 1
                 continue
@@ -80,42 +80,41 @@ class MinibatchSentenceIt(object):
     
 if __name__ == '__main__':
     if len(sys.argv) < 1:
-        print("usage : train_fastsent.py lang [sep] [remote] ")
+        print("usage : train_fastsent.py lang [tokenized] [remote] ")
         sys.exit(1)
     np.random.seed(1234)
     
     lang=sys.argv[1]
     if len(sys.argv)==2:
-        sep=" "
+        tokenized=True
         remote=True
     elif len(sys.argv)==3:
         remote=True
-        sep=" " if (sys.argv[2].lower()=='token') else ""
+        tokenized=True if (sys.argv[2].lower()[0]=='t') else False
     elif len(sys.argv)==4:
-        remote=(sys.argv[3].lower()[0]=='r')
-        sep=" " if (sys.argv[2].lower()=='token') else ""
+        remote=(sys.argv[3].lower()[0]=='r') # r for remote
+        tokenized=True if (sys.argv[2].lower()[0]=='t') else False # t for tokenized
         
-    extract=""
+    strExtract=""
+    strToken="_tokenized" if (tokenized and lang=="zh") else ""
+
     if lang=="zh":
-        if sep=="":
-            path = '/media/data/datasets/wikipedia/entities/bigpage_zh.txt_line_processed'+extract if remote else "data/dataset.txt"
-        else:
-            path = '/media/data/datasets/wikipedia/entities/bigpage_zh_tokenized.txt_line_processed'+extract if remote else "data/dataset_tokenized.txt"
+        path = '/media/data/datasets/wikipedia/entities/bigpage_zh'+strToken+'.txt_line_processed'+strExtract if remote else "data/dataset"+strToken+".txt"
     elif lang=="en":
-        path='/media/data/datasets/wikipedia/entities/bigpage_'+lang+'.txt_processed'
+        path='/media/data/datasets/wikipedia/entities/bigpage_'+lang+'.txt_line_processed'
         
     vocab = Counter()
     print "build vocab"
     Ls = []
 
-    sentences = SentenceIt(path)#.split(sep)
+    sentences = SentenceIt(path)
     for s in sentences:
         if s[0]=="#":
             Ls.append(1)
             vocab[s]+=1
         else:
-            if sep==" ":
-                s=s.split(sep)
+            if tokenized:
+                s=s.split(" ")
             Ls.append(len(s))
             for w in s:
                 vocab[w] += 1
@@ -156,7 +155,7 @@ if __name__ == '__main__':
     
     save_every = 100 if remote else 4
 
-    batches = MinibatchSentenceIt(path, batch_size, w2i,sep)
+    batches = MinibatchSentenceIt(path, batch_size, w2i,tokenized)
     print "begin"
 
 
