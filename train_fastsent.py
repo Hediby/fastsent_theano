@@ -177,6 +177,8 @@ if __name__ == '__main__':
         import utils
         wordsModel,floatsModel=utils.loadModel(pretrainedFile)
     
+    print "finish load pretrain"
+    
     for word,oldi in wordsModel.items(): 
         if word in words:
             i=w2i[word]
@@ -192,7 +194,7 @@ if __name__ == '__main__':
     strNeg="_neg"+str(neg_len)
     strBs="_bs"+str(batch_size)
 
-    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_"+lang+pt+"_fastsent"+strToken+strBs+strNeg+".vec"+extract if remote else "chineseModel"
+    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_" + lang + pt + "_fastsent" + strToken + strBs + strNeg + ".vec" + strExtract if remote else "chineseModel"
 
     model = FastSentNeg.createNeg(vocab_size, dim,w2i=w2i,i2f=i2f,index_fixe=index_fixe,i2e=i2e,neg_len=neg_len)
     #model = FastSent.create(vocab_size, dim)
