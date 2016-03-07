@@ -32,15 +32,18 @@ class Model(object):
         return cls(W, V,w2i, autoencode)
     
     @classmethod
-    def create(cls, vocab_size, dim,w2i, autoencode=True):
-        W = 0.001*np.random.randn(vocab_size, dim)
-        V = 0.001*np.random.randn(vocab_size, dim)
+    def create(cls, vocab_size, dim,w2i, i2e=[],autoencode=True,cst=0.1):
+        W = np.vstack((np.zeros(dim),cst*np.random.randn(vocab_size-1, dim))).astype(dtype)
+        V = np.vstack((np.zeros(dim),cst*np.random.randn(vocab_size-1, dim))).astype(dtype)
+        for i,e in i2e.items():
+            W[i]=e
+            V[i]=e
         return cls(W,V,w2i,autoencode)
     
     @classmethod
-    def createNeg(cls, vocab_size, dim,w2i, autoencode=True,i2f=None,index_fixe=[0],i2e=[],neg_len=10):
-        W = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
-        V = np.vstack((np.zeros(dim),0.001*np.random.randn(vocab_size-1, dim))).astype(dtype)
+    def createNeg(cls, vocab_size, dim,w2i, autoencode=True,i2f=None,index_fixe=[0],i2e=[],neg_len=10,cst=0.1):
+        W = np.vstack((np.zeros(dim),cst*np.random.randn(vocab_size-1, dim))).astype(dtype)
+        V = np.vstack((np.zeros(dim),cst*np.random.randn(vocab_size-1, dim))).astype(dtype)
         for i,e in i2e.items():
             W[i]=e
             V[i]=e
@@ -56,15 +59,16 @@ class Model(object):
 
 class FastSentNeg(Model):
     def __init__(self, W,V,w2i,autoencode,i2f,index_fixe=[0],neg_len=10):
+        
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')
         self.w2i=w2i
         self.i2f=i2f
         self.autoencode = autoencode
         self.neg_len=neg_len
-
         self.params_name=["W_index","V_index"]
         
+
         indexes = T.imatrix('X')
         neg=T.ivector('neg')
         batch_mask = 1-T.eq(indexes, T.zeros_like(indexes))
@@ -117,7 +121,7 @@ class FastSentNeg(Model):
 
         acti_mask=activations[chelou_line,chelou_column]*mask_full
         
-        prediction = softmax(acti_mask)
+        prediction = 1e-6+softmax(acti_mask)
 
         cost = T.mean(T.sum(-T.log(prediction)*mask_zero, axis=1))
         
@@ -141,7 +145,7 @@ class FastSentNeg(Model):
         updates.append((self.W,updateW))
 
         self._train = theano.function(inputs = [indexes, lr,neg],
-                                      outputs = [cost], 
+                                      outputs = [cost,prediction,acti_mask], 
                                       updates=updates, 
                                       allow_input_downcast=True,
                                       on_unused_input='warn')
@@ -158,12 +162,13 @@ class FastSentNeg(Model):
                 b = batch
                 tic = time()
                 neg=np.array([weighted_choice(self.i2f) for i in range(self.neg_len)] )
-                cost = self._train(b, learning_rate,neg)[0]
+                cost,prediction,acti_mask = self._train(b, learning_rate,neg)#[0]
                 toc = time() - tic
                 cost_vec.append(cost)
                 n_iter += 1
                 if not n_iter%save_every:
                     if verbose:
+                        print "W norm:" + str(np.linalg.norm(self.W.get_value()))
                         print "\tSaving model"
                     self.save(saving_path)
                 if verbose:
@@ -171,7 +176,11 @@ class FastSentNeg(Model):
                                                                    n_iter, 
                                                                    cost, 
                                                                    toc)
+                    
                 if np.isnan(cost):
+                    print "cost: " + str(cost)
+                    print "prediction: " + str(prediction)
+                    print "acti_mask: " + str(acti_mask)
                     break_all = True
                 if break_all:
                     break
@@ -210,7 +219,7 @@ class FastSent(Model):
             M.append(mask)
         y_true = T.concatenate(I, axis=1)
         mask = T.concatenate(M, axis=1)
-        output = prediction[T.arange(y_true.shape[0]).reshape((-1,1)), 
+        output = 1e-6+prediction[T.arange(y_true.shape[0]).reshape((-1,1)), 
                             y_true]
         
         cost = T.mean(T.sum(-T.log(output)*mask, axis=1))

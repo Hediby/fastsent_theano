@@ -100,32 +100,44 @@ if __name__ == '__main__':
 
     if lang=="zh":
         path = '/media/data/datasets/wikipedia/entities/bigpage_zh'+strToken+'.txt_line_processed'+strExtract if remote else "data/dataset"+strToken+".txt"
-    elif lang=="en":
+    else:
         path='/media/data/datasets/wikipedia/entities/bigpage_'+lang+'.txt_line_processed'
         
     vocab = Counter()
     print "build vocab"
     Ls = []
-
+    max_voc=200000
     sentences = SentenceIt(path)
-    for s in sentences:
-        if s[0]=="#":
-            Ls.append(1)
-            vocab[s]+=1
-        else:
+    if lang=="zh":
+        for s in sentences:
+            if s[0]=="#":
+                Ls.append(1)
+                vocab[s]+=1
+            else:
+                if tokenized:
+                    s=s.split(" ")
+                Ls.append(len(s))
+                for w in s:
+                    vocab[w] += 1
+    else:
+        for s in sentences:
             if tokenized:
                 s=s.split(" ")
-            Ls.append(len(s))
-            for w in s:
-                vocab[w] += 1
+                Ls.append(len(s))
+                for w in s:
+                    vocab[w] += 1
+            else:
+                print "error: case not possible yet"
+
     #sns.distplot(Ls)
+
     n_data = sentences.n_data
     print "data size: " + str(n_data)
     w2i = {}
     i2cf = []
     i2w = []
     f = open('vocab','w')
-    mc =  vocab.most_common()[:250000]
+    mc =  vocab.most_common()[:max_voc]
     cumFreq=0
     
 
@@ -140,7 +152,7 @@ if __name__ == '__main__':
 
     f.close()
 
-    words=w2i.keys()
+    words=map(lambda w:w[0],mc)
     print "vocab size: " + str(len(words))
     print "words: "+ str(words[:10])
     print "i2f: "+ str(i2f[:10])
@@ -157,20 +169,19 @@ if __name__ == '__main__':
     
     print "begin"
 
-
     i2e={}
     index_fixe=[0]
     if lang=="zh":
         pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "data/pretrained.txt"
     elif lang=="en":
-        pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_en_ws5_ne5_sa0.0001_mc100.vec"
+        pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_en_ws5"+pt+"_ne5_sa0.0001_mc100.vec"
         
 
     if remote:
         sys.path.insert(0, '/home/arame/hakken-api/models/')
         import model
         import utils
-        pretrained=model.model(pretrainedFile,max_voc=200000)
+        pretrained=model.model(pretrainedFile,max_voc=max_voc)
         wordsModel=pretrained.words
         floatsModel=pretrained.floats
     else:
@@ -182,7 +193,7 @@ if __name__ == '__main__':
     for word,oldi in wordsModel.items(): 
         if word in words:
             i=w2i[word]
-            if len(word)>1 and word[0:2]=="#":
+            if len(word)>1 and word[0:2]=="##":
                 index_fixe.append(i)
             i2e[i]=floatsModel[oldi]
     
