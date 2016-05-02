@@ -14,7 +14,7 @@ from theano.tensor.nnet import softmax
 #dtype = theano.config.dtype
 from random import random
 from bisect import bisect
-
+import os
 
 def weighted_choice(i2f):
     x = random()
@@ -52,13 +52,14 @@ class Model(object):
     def save(self, saving_path):
         print saving_path
         data = [self.w2i,self.W, self.V, self.autoencode]
+        os.rename(saving_path,saving_path+'_safe')
         with open(saving_path,'wb') as f:
             cPickle.dump(data, f)
         return None
 
 
 class FastSentNeg(Model):
-    def __init__(self, W,V,w2i,autoencode,i2f,index_fixe=[0],neg_len=10):
+    def __init__(self, W,V,w2i,autoencode,i2f,index_fixe,neg_len):
         
         self.W = theano.shared(W, name='W')
         self.V = theano.shared(V, name='V')

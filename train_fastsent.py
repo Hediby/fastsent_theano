@@ -9,6 +9,7 @@ from collections import Counter
 import numpy as np
 from fastsent import FastSent,FastSentNeg
 import sys
+from gensim.utils import any2unicode
 
 def indexize(s, w2i,tokenized=True):
     res = []
@@ -80,64 +81,64 @@ class MinibatchSentenceIt(object):
     
 if __name__ == '__main__':
     if len(sys.argv) < 1:
-        print("usage : train_fastsent.py lang [tokenized] [remote] ")
+        print("usage : train_fastsent.py lang [tokenized] [remote] [useStopwords]")
         sys.exit(1)
     np.random.seed(1234)
     
     lang=sys.argv[1]
+    useWeb=False
     if len(sys.argv)==2:
+        useStopwords=True
         tokenized=True
         remote=True
     elif len(sys.argv)==3:
+        useStopwords=True
         remote=True
         tokenized=True if (sys.argv[2].lower()[0]=='t') else False
     elif len(sys.argv)==4:
+        useStopwords=True
         remote=(sys.argv[3].lower()[0]=='r') # r for remote
         tokenized=True if (sys.argv[2].lower()[0]=='t') else False # t for tokenized
-        
-    strExtract=""
-    strToken="_tok" if (tokenized and lang=="zh") else ""
-
-    if lang=="zh":
-        path = '/media/data/datasets/wikipedia/entities/bigpage_zh'+strToken+'.txt_line_processed'+strExtract if remote else "data/dataset"+strToken+".txt"
-    else:
-        path='/media/data/datasets/wikipedia/entities/bigpage_'+lang+'.txt_line_processed'
+    elif len(sys.argv)==5:
+        useStopwords=(sys.argv[4].lower()[0]=='s') # s for stopwords
+        remote=(sys.argv[3].lower()[0]=='r') # r for remote
+        tokenized=True if (sys.argv[2].lower()[0]=='t') else False # t for tokenized
+    elif len(sys.argv)==6:
+        useWeb=(sys.argv[4].lower()[0]=='w') # w for web
+        useStopwords=(sys.argv[4].lower()[0]=='s') # s for stopwords
+        remote=(sys.argv[3].lower()[0]=='r') # r for remote
+        tokenized=True if (sys.argv[2].lower()[0]=='t') else False # t for tokenized
+    
+    strUseWeb="_web" if useWeb else '' 
+    extract=False
+    strExtract="_extract" if extract else ''
+    strToken="_notok" if (not tokenized) else ""
+    strStopWords="_nosw" if not useStopwords else ""
+    path = '/media/data/datasets/wikipedia/entities/bigpage_' + lang + strUseWeb + strToken+ '.txt_line_processed'+ strStopWords+ strExtract if remote else "data/dataset" + strStopWords + strToken + ".txt"
         
     vocab = Counter()
     print "build vocab"
     Ls = []
-    max_voc=200000
+
     sentences = SentenceIt(path)
-    if lang=="zh":
-        for s in sentences:
-            if s[0]=="#":
-                Ls.append(1)
-                vocab[s]+=1
-            else:
-                if tokenized:
-                    s=s.split(" ")
-                Ls.append(len(s))
-                for w in s:
-                    vocab[w] += 1
-    else:
-        for s in sentences:
+    for s in sentences:
+        if lang=='zh' and s[0]=="#":
+            Ls.append(1)
+            vocab[s]+=1
+        else:
             if tokenized:
                 s=s.split(" ")
-                Ls.append(len(s))
-                for w in s:
-                    vocab[w] += 1
-            else:
-                print "error: case not possible yet"
-
+            Ls.append(len(s))
+            for w in s:
+                vocab[w] += 1
     #sns.distplot(Ls)
-
     n_data = sentences.n_data
     print "data size: " + str(n_data)
     w2i = {}
     i2cf = []
     i2w = []
     f = open('vocab','w')
-    mc =  vocab.most_common()[:max_voc]
+    mc =  vocab.most_common()[:250000]
     cumFreq=0
     
 
@@ -152,16 +153,15 @@ if __name__ == '__main__':
 
     f.close()
 
-    words=map(lambda w:w[0],mc)
+    words=w2i.keys()
     print "vocab size: " + str(len(words))
     print "words: "+ str(words[:10])
     print "i2f: "+ str(i2f[:10])
 
-    batch_size = 300 if remote else 5
+    batch_size = 500 if remote else 5
     vocab_size = len(i2w)
-    n_epochs = 500000 if remote else 2
+    n_epochs = 50000 if remote else 2
     dim=200 if remote else 6
-    pt="_pt" if lang!="en" else ""
     
     save_every = 1000 if remote else 4
 
@@ -169,49 +169,55 @@ if __name__ == '__main__':
     
     print "begin"
 
+
     i2e={}
     index_fixe=[0]
-    if lang=="zh":
-        pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_zh_ws5_pt_ne5_sa0.0001_mc40.vec" if remote else "data/pretrained.txt"
-    elif lang=="en":
-        pretrainedFile="/media/data/datasets/models/word2vec_model/model_bridge/model_en_ws5"+pt+"_ne5_sa0.0001_mc100.vec"
+    pretrainedFile="/media/data/datasets/models/new_arame/"+lang+".vec" if remote else "data/pretrained.txt"
         
-
     if remote:
         sys.path.insert(0, '/home/arame/hakken-api/models/')
         import model
         import utils
-        pretrained=model.model(pretrainedFile,max_voc=max_voc)
-        wordsModel=pretrained.words
-        floatsModel=pretrained.floats
+        max_voc=2500 if extract else 'inf'
+        pretrained=model.model(pretrainedFile,max_voc=max_voc,decale=1)
+        for word in words:
+            if any2unicode(word) in pretrained.vocab:
+                i=w2i[word]
+                if False and len(word)>1:# and word[0:2]=="##":
+                    index_fixe.append(i)
+                i2e[i]=pretrained.getVector(word)
     else:
         import utils
         wordsModel,floatsModel=utils.loadModel(pretrainedFile)
-    
+        for word,oldi in wordsModel.items(): 
+            if word in words:
+                i=w2i[word]
+                if len(word)>1:# and word[0:2]=="#":
+                    index_fixe.append(i)
+                i2e[i]=floatsModel[oldi]
+            
     print "finish load pretrain"
-    
-    for word,oldi in wordsModel.items(): 
-        if word in words:
-            i=w2i[word]
-            if len(word)>1 and word[0:2]=="##":
-                index_fixe.append(i)
-            i2e[i]=floatsModel[oldi]
-    
+     
+            
+    print "len index_fixe:" + str(len(index_fixe))
     print "index_fixe: "+ str(index_fixe[:10])
     
     print "create model"
-    lr=0.0025 if remote else 0.01
-    neg_len=800 if remote else 10
+    lr=0.025 if remote else 0.01
+    neg_len=500 if remote else 10
     strNeg="_neg"+str(neg_len)
     strBs="_bs"+str(batch_size)
 
-    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_" + lang + pt + "_fastsent" + strToken + strBs + strNeg + ".vec" + strExtract if remote else "chineseModel"
+    pt="_pt"
+
+    saving_path = "/media/data/datasets/models/word2vec_model/model_fastsent/pickle_" + lang + pt + "_fastsent" + strToken + strStopWords + strBs + strNeg + ".vec" + strExtract if remote else "chineseModel"
 
     model = FastSentNeg.createNeg(vocab_size, dim,w2i=w2i,i2f=i2f,index_fixe=index_fixe,i2e=i2e,neg_len=neg_len)
     #model = FastSent.create(vocab_size, dim)
+    
     model.train(batches, 
                 lr=lr, 
-                min_lr=lr/float(100), 
+                min_lr=lr/100, 
                 n_epochs=n_epochs, 
                 saving_path=saving_path, 
                 save_every=save_every, 
